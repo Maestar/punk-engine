@@ -81,7 +81,7 @@ const data = {
           left: 220,
           top: 170,
           type: "talk",
-          script: "scene1_1",
+          script: "scene1_2",
         },
       },
     },
@@ -157,20 +157,24 @@ const data = {
           hiddenID: 0,
         },
       },
-        interactable_hidden_count: 1,
-        interactable_hidden: {
-          0: {
-            left: 350,
-            top: 110,
-            type: "talk",
-            script: "scene2_0",
-          },
+      interactable_hidden_count: 1,
+      interactable_hidden: {
+        0: {
+          left: 350,
+          top: 110,
+          type: "talk",
+          script: "scene3_0",
+        },
       },
     },
   },
   dialogueData: {
     'scene1_0': 'This is some test Dialogue.',
     'scene1_1': 'This is some test dialogue\nThat is multilined.',
+    'scene1_2': 'haha almost forgot\nthis\none.',
+    'scene2_0': 'This is scene 2',
+    'scene2_1': 'boy howdy,\ndont forget to add this dialogue lines to the data',
+    'scene3_0': 'lets make sure scene three works\nalright?',
   }
 };
 
@@ -290,15 +294,17 @@ function setup() {
     hoverCursor: "pointer",
   });
 
+  //HEY NACHTE: THESE PROPERTIES ARE POSSIBLY REDUNDANT SINCE WE SET THE GROUP PROPERTIES THAT OVERRIDE THIS IN
+  //DRAWHIDDENINTERACTABLES
   TALKBOX.set({
     selectable: false,
     hoverCursor: "pointer",
   });
 
-  canvas.on('object:removed',function(object){
+  canvas.on('object:removed', function (object) {
     console.warn(`REMOVED ${object}`);
   });
-  canvas.on('object:added',function(object){
+  canvas.on('object:added', function (object) {
     console.warn(`ADDED: ${object}`);
   })
 
@@ -337,15 +343,27 @@ function removeInteractables(type) {
       if (currentInteractables.length != null) {
         console.log(`CURRENT INTERACTABLES: ${currentInteractables}`);
         currentInteractables.forEach((object) => {
-          canvas.remove(object);});
+          canvas.remove(object);
+        });
       } else {
         return;
       }
       break;
     case "hidden":
+      //REMEMBER TO FIGURE OUT HOW TO REMOVE TEXT AND IMAGE
       if (currentHiddenInteractables.length != null) {
         console.log(`CURRENT HIDDEN INTERACTABLES: ${currentInteractables}`);
-        currentHiddenInteractables.forEach((object) => canvas.remove(object));
+        currentHiddenInteractables.forEach((object) => {
+          console.log(`object for removal type: ${object.type}`)
+          if(object.type === 'group'){
+            object.forEachObject((item) => {
+              canvas.remove(item);
+              console.log('item removed');
+            });
+          }else{
+          canvas.remove(object);
+          }
+        });
       } else {
         return;
       }
@@ -378,7 +396,7 @@ function drawSceneInteractables(scene) {
               //TODO figure out how to link the hidden object to the current clicked object for revealing
               revealHidden(interactable.target.hiddenID);
             });
-            console.log(`hiddenID: ${interactable.hiddenID}`);
+          console.log(`hiddenID: ${interactable.hiddenID}`);
           nextInteractables.push(interactable);
           break;
         default:
@@ -391,34 +409,35 @@ function drawSceneInteractables(scene) {
     return;
   }
 }
-function revealHidden(hiddenID){
+
+function revealHidden(hiddenID) {
   console.log(`Inside Reveal Hidden, Hidden ID: ${hiddenID}`);
   currentInteractables.forEach((Interactable) => {
-    Interactable.set({visible: false});
+    Interactable.set({ visible: false });
   });
   console.log('interactables hidden');
   arrowArray.forEach((arrow) => {
-    arrow.set({visible: false});
+    arrow.set({ visible: false });
   });
   console.log('arrows hidden');
-  hiddenImage = currentHiddenInteractables[hiddenID];
-  console.log(`hidden image obj: ${hiddenImage}`);
-  hiddenImage.set({visible: true,});
-  console.log(`hidden image: ${hiddenImage.visible}`);
+  hiddenObj = currentHiddenInteractables[hiddenID];
+  console.log(`hidden image obj: ${hiddenObj}`);
+  hiddenObj.set({ visible: true, });
+  console.log(`hidden image: ${hiddenObj.visible}`);
 
   canvas.requestRenderAll();
 
 }
 
-function returnVisible(hiddenObj){
-  hiddenObj.set({visible: false});
+function returnVisible(hiddenObj) {
+  hiddenObj.set({ visible: false });
 
   currentInteractables.forEach((Interactable) => {
-    Interactable.set({visible: true});
+    Interactable.set({ visible: true });
   });
 
   arrowArray.forEach((arrow) => {
-    arrow.set({visible: true});
+    arrow.set({ visible: true });
   });
   canvas.requestRenderAll();
 }
@@ -433,16 +452,32 @@ function drawSceneHiddenInteractables(scene) {
       interactableData = layoutData[scene]['interactable_hidden'][i];
       switch (interactableData.type) {
         case "talk":
+          console.log('inside talk case');
           let interactable = fabric.util.object.clone(TALKBOX);
           interactable.set({
             left: interactableData.left,
             top: interactableData.top,
-            visible: false,})
-            .on("mouseup", () => {
-              returnVisible(interactable);
-            });
-            console.log(interactable);
-          nextInteractables.push(interactable);
+          });
+
+          let textObj = new fabric.Text(dialogueData[interactableData.script]);
+          console.log(`Dialogue Data: ${textObj}`);
+          textObj.set({
+            fontSize: 14,
+            top: interactable.top + 5,
+            left: interactable.left + 5,
+          });
+
+          let group = new fabric.Group([interactable, textObj], {
+            left: interactableData.left,
+            top: interactableData.top,
+            visible: false,
+            selectable: false,
+            hoverCursor: "pointer",
+          }).on('mouseup', () => {
+            returnVisible(group);
+          });
+          console.log(`GROUP: ${group}`);
+          nextInteractables.push(group);
           break;
         default:
           break;
