@@ -393,7 +393,6 @@ function drawSceneInteractables(scene) {
               hiddenID: interactableData.hiddenID,
             })
             .on("mouseup", (interactable) => {
-              //TODO figure out how to link the hidden object to the current clicked object for revealing
               revealHidden(interactable.target.hiddenID);
             });
           console.log(`hiddenID: ${interactable.hiddenID}`);
@@ -441,6 +440,31 @@ function returnVisible(hiddenObj) {
   });
   canvas.requestRenderAll();
 }
+
+function createTextBox(cloneTarget, textData, objectData, fontSize, padding){
+  let boxImage = fabric.util.object.clone(cloneTarget);
+  boxImage.set({
+    selectable: false,
+    hoverCursor: "pointer",
+    left: objectData.left,
+    top: objectData.top,
+  });
+
+  let boxText = new fabric.Text(textData,{
+    fontSize: fontSize ? fontSize : 12,
+    top: boxImage.top + padding,
+    left: boxImage.left + padding,
+  });
+
+  let textBoxGroup = new fabric.Group([boxImage, boxText], {
+    left: objectData.left,
+    top: objectData.top,
+    selectable: false,
+    hoverCursor: "pointer",
+  });
+
+  return textBoxGroup;
+}
 function drawSceneHiddenInteractables(scene) {
   console.log(`Inside Draw Hidden Interactables, Scene: ${scene}`);
 
@@ -452,31 +476,13 @@ function drawSceneHiddenInteractables(scene) {
       interactableData = layoutData[scene]['interactable_hidden'][i];
       switch (interactableData.type) {
         case "talk":
-          console.log('inside talk case');
-          let interactable = fabric.util.object.clone(TALKBOX);
-          interactable.set({
-            left: interactableData.left,
-            top: interactableData.top,
-          });
-
-          let textObj = new fabric.Text(dialogueData[interactableData.script]);
-          console.log(`Dialogue Data: ${textObj}`);
-          textObj.set({
-            fontSize: 14,
-            top: interactable.top + 5,
-            left: interactable.left + 5,
-          });
-
-          let group = new fabric.Group([interactable, textObj], {
-            left: interactableData.left,
-            top: interactableData.top,
+          let group = createTextBox(TALKBOX, dialogueData[interactableData.script], interactableData, 14, 5);
+          group.set({
             visible: false,
-            selectable: false,
-            hoverCursor: "pointer",
-          }).on('mouseup', () => {
+          });
+          group.on('mouseup', () => {
             returnVisible(group);
           });
-          console.log(`GROUP: ${group}`);
           nextInteractables.push(group);
           break;
         default:
