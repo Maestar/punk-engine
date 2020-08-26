@@ -1,3 +1,9 @@
+/********************TEMP DATA*********************
+*********temporary data for testing,***************
+*******eventually move this to json ***************
+*******and introduce a json loader/pasrer**********
+*/
+
 const data = {
   destinationMap: {
     scene1: {
@@ -178,6 +184,11 @@ const data = {
   }
 };
 
+/******DATA CREATION
+ * splitting out all the data from TEMP DATA into variables.
+ * creating all the static variables that will hold fabric objects.
+ * creating the canvas.
+ */
 const destinationMap = data.destinationMap;
 const layoutData = data.layoutData;
 const dialogueData = data.dialogueData;
@@ -203,6 +214,19 @@ let bgArray = [];
 let arrowArray = [];
 const canvas = new fabric.Canvas("game", { selection: false });
 
+/**LOADING BLOCK
+ *
+ * startLoading: accepts a function to call when it's complete.
+ * iterates through all the urls in the imageURLS array
+ * gives them on onload to check off they've been loaded.
+ * assign the source to the img url in the imageURL array pos it's iterating on.
+ *
+ * loadComplete: The callback startLoading calls when it's loaded all the images.
+ * Takes all those images created and put into the images array and creates new fabricJS
+ * objects with them.
+ *
+ * Calls the setup block when completed.
+ */
 function startLoading(callBackFunc) {
   console.log("startloading");
   for (let i = 0; i < imageURLS.length; i++) {
@@ -244,7 +268,16 @@ function loadComplete() {
 
   setup();
 }
-
+/**SETUP BLOCK
+ *
+ * setup: currently manually places everything and assigns some default needs for the
+ * fabricJS objects. Adds them to the canvas.
+ *
+ * TODO:// should pull all this data from the JSON (position/selectable/ect)
+ *        should add things to an array where they're iterated over and added to the canvas that way.
+ *
+ * calls the interactsable drawing functions.
+ */
 function setup() {
   console.log("setup");
   canvas.setBackgroundImage(BG_1);
@@ -301,6 +334,7 @@ function setup() {
     hoverCursor: "pointer",
   });
 
+  //CONSOLE LOG ALERTS SO WE CAN SEE WHATS GETTING DRAWN AND REMOVED
   canvas.on('object:removed', function (object) {
     console.warn(`REMOVED ${object}`);
   });
@@ -313,6 +347,19 @@ function setup() {
   canvas.requestRenderAll();
 }
 
+/**SCENE CHANGE BLOCK
+ * changeScene: accepts the direction you went, so it knows what scene to pull from the JSON
+ * updates the navigation arrows destinations,
+ * removes all the old hidden interactable objects -> draws the new ones.
+ * removes all visible interactable objects -> draws the new ones.
+ * rerenders the scene
+ *
+ * updateNavigation: accepts the scene it needs to update navigation for.
+ * pulls the background and sets it from the scene
+ * updates all the direction objects.
+ * sets the current scene to the new scene.
+ *
+ */
 function changeScene(direction) {
   let nextScene = destinationMap[currentScene][direction];
   console.log(`next Scene: ${nextScene}`);
@@ -335,7 +382,24 @@ function updateNavigation(scene) {
 
   currentScene = scene;
 }
-
+/** INTERACTABLES BLOCK
+ * removeInteractables: accepts hidden or visisble
+ * take the currenthidden or visible array and interate over it, removing all the objects from the canvas.
+ * note: if its a nested object (text box) it iterates over that nested object removing them individually.
+ *
+ * drawSceneInteractables: accepts the scene it pulls data from
+ * switch statement that takes the type of obbject it is and creates a fabricJS object based on it's json data.
+ * give it the onclick function and the hidden object ID it reveals.
+ * pushes that to the nextInteractables array
+ * draws all the items in the nextInteractables array
+ * copies nextInteractables to currentInteractables.
+ *
+ * drawSceneHiddenInteractables: accepts the scene it pulls data from
+ * switch statement that takes the type of object it is and creates a fabricJS object based on its json data.
+ * sets those hidden objects to hidden and adds them to nextHiddenInteractables.
+ * draws all the items in said array.
+ * Copies nextHiddenInteractables to currentHiddenInteractables.
+ */
 function removeInteractables(type) {
   console.log("remove interactables");
   switch (type) {
@@ -350,7 +414,6 @@ function removeInteractables(type) {
       }
       break;
     case "hidden":
-      //REMEMBER TO FIGURE OUT HOW TO REMOVE TEXT AND IMAGE
       if (currentHiddenInteractables.length != null) {
         console.log(`CURRENT HIDDEN INTERACTABLES: ${currentInteractables}`);
         currentHiddenInteractables.forEach((object) => {
@@ -409,6 +472,52 @@ function drawSceneInteractables(scene) {
   }
 }
 
+function drawSceneHiddenInteractables(scene) {
+  console.log(`Inside Draw Hidden Interactables, Scene: ${scene}`);
+
+  const interactablesCount = layoutData[scene].interactable_hidden_count;
+  if (interactablesCount > 0) {
+    let nextInteractables = [];
+
+    for (i = 0; i < interactablesCount; i++) {
+      interactableData = layoutData[scene]['interactable_hidden'][i];
+      switch (interactableData.type) {
+        case "talk":
+          let group = createTextBox(TALKBOX, dialogueData[interactableData.script], interactableData, 14, 5);
+          group.set({
+            visible: false,
+          });
+          group.on('mouseup', () => {
+            returnVisible(group);
+          });
+          nextInteractables.push(group);
+          break;
+        default:
+          break;
+      }
+    }
+    nextInteractables.forEach((object) => canvas.add(object));
+    currentHiddenInteractables = nextInteractables;
+  } else {
+    return;
+  }
+}
+
+/**FUNCTIONALITY BLOCK
+ *
+ * revealHidden: accepts the hiddenID saved to the fabricJS object the user clicks
+ * sets all other objects in the scene invisible via the current scene data arrays.
+ * takes the hidden objectID and uses it as the array index to reveal the correct hiddenobject.
+ * rerenders the scene.
+ *
+ * returnVisible: accepts the object you click on.
+ * takes that object and returns it to invisible.
+ * iterates through current scene data arrays and returns everything to visible.
+ * rerenders the scene.
+ *
+ *
+ */
+
 function revealHidden(hiddenID) {
   console.log(`Inside Reveal Hidden, Hidden ID: ${hiddenID}`);
   currentInteractables.forEach((Interactable) => {
@@ -465,37 +574,9 @@ function createTextBox(cloneTarget, textData, objectData, fontSize, padding){
 
   return textBoxGroup;
 }
-function drawSceneHiddenInteractables(scene) {
-  console.log(`Inside Draw Hidden Interactables, Scene: ${scene}`);
 
-  const interactablesCount = layoutData[scene].interactable_hidden_count;
-  if (interactablesCount > 0) {
-    let nextInteractables = [];
 
-    for (i = 0; i < interactablesCount; i++) {
-      interactableData = layoutData[scene]['interactable_hidden'][i];
-      switch (interactableData.type) {
-        case "talk":
-          let group = createTextBox(TALKBOX, dialogueData[interactableData.script], interactableData, 14, 5);
-          group.set({
-            visible: false,
-          });
-          group.on('mouseup', () => {
-            returnVisible(group);
-          });
-          nextInteractables.push(group);
-          break;
-        default:
-          break;
-      }
-    }
-    nextInteractables.forEach((object) => canvas.add(object));
-    currentHiddenInteractables = nextInteractables;
-  } else {
-    return;
-  }
-}
-
+/** START THE GAME */
 window.onload = () => {
   startLoading(loadComplete);
 };
